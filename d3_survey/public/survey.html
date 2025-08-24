@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<div id="container"></div>
+<script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+<script type="module">
+
+  console.log(d3); // test if d3 is loaded
+
+  // Add an SVG
+  let svg = d3.select("body")
+    .append("svg")
+    .attr("font-family", "Arial")
+    .attr("width", 1400)
+    .attr("height", 1000);
+
+  let current_page = 'introduction'
+  //let current_page = 'tutorial'
+  //let current_page = 'parab_0'
+
+  let userId = ""
+
+  let available_pages = []
+  const pages = ['introduction', 'tutorial']
+
+  let points = []
+
+  //x, y, width, height : x, y, r
+  let shape_constraints = {"shape 1": [], "shape 2": []}
+
+  const initilize_id = () => {
+    userId = Math.random().toString(36).substr(2, 25);
+  }
+
+  const initialize_pages = () => {
+
+    //initialize available pages
+    const question_types = ['rect', 'circle', 'parab']
+    
+    for(let i = 0; i < 10; i++){
+      for (let question_type of question_types){
+            const question_title = question_type + "_" + i.toString()
+            available_pages.push(question_title)
+        }
+    }
+
+    console.log(available_pages)
+
+    //initialize order of pages
+    for(let i = 0; i < available_pages.length; i++){
+        const available_index = Math.floor(Math.random() * (available_pages.length - i))
+
+        pages.splice(i + 2, 1, available_pages[available_index])
+        available_pages.splice(available_index, 1)
+    }
+
+    pages.splice(pages.length, 1, "end")
+
+    console.log(pages)
+
+  }
+
+  const introduction_page = () => {
+    const intro_title = svg.append("text")
+        .attr('x', 200)           
+        .attr('y', 50)          
+        .attr('font-size', '18px')  
+        .attr('fill', 'black')     
+        .attr('font-weight', 800)   
+        .text('Survey Introduction');
+
+    const intro_text = svg.append("text")
+        .attr('x', 200)           
+        .attr('y', 150)          
+        .attr('font-size', '18px')  
+        .attr('fill', 'black')        
+        .text('Welcome to my survey! This is for an assignment for CS 573 Data Visualization.');
+
+    const text_cont = svg.append("text")
+        .attr('x', 200)           
+        .attr('y', 250)          
+        .attr('font-size', '18px')  
+        .attr('fill', 'black')        
+        .text('You will be asked to estimate what percentage of more points the larger shape encompasses compared to the smaller  ');
+    const text_contq = svg.append("text")
+        .attr('x', 200)           
+        .attr('y', 300)          
+        .attr('font-size', '18px')  
+        .attr('fill', 'black')        
+        .text('shape of different sections of a scatterplot. ');
+
+    const text_cont2 = svg.append("text")
+        .attr('x', 200)           
+        .attr('y', 350)          
+        .attr('font-size', '18px')  
+        .attr('fill', 'black')        
+        .text('Please just use your best guess at a first glance of each plot, no need for exact measurements!');
+
+    const text_tut_next = svg.append("text")
+        .attr('x', 200)           
+        .attr('y', 450)          
+        .attr('font-size', '18px')  
+        .attr('fill', 'black')        
+        .text('A tutorial can be found on the next page. Please click continue to proceed.');
+  }
+
+  const tutorial_page = () => {
+    const intro_title = svg.append("text")
+        .attr('x', 200)           
+        .attr('y', 50)          
+        .attr('font-size', '18px')  
+        .attr('fill', 'black')   
+        .attr('font-weight', 800)     
+        .text('Survey Tutorial');
+
+    render_scatters()
+    render_rectangles(320, 250, 500)
+
+    const intro_text = svg.append("text")
+        .attr('x', 200)           
+        .attr('y', 100)          
+        .attr('font-size', '18px')  
+        .attr('fill', 'black')        
+        .text('You will be given two scatter plots like the ones shown below. Both plots are identical!');
+
+    const text_cont = svg.append("text")
+        .attr('x', 200)           
+        .attr('y', 150)          
+        .attr('font-size', '18px')  
+        .attr('fill', 'black')        
+        .text('Estimate what percentage of more points the larger shape encompasses compared to the smaller shape. ');
+    const text_cont2 = svg.append("text")
+        .attr('x', 200)           
+        .attr('y', 440)          
+        .attr('font-size', '18px')  
+        .attr('fill', 'black')        
+        .text('The percentage (%) of x,y coordinate points you believe the larger shape encompasses compared to the ');
+    const text_cont3 = svg.append("text")
+        .attr('x', 200)           
+        .attr('y', 470)          
+        .attr('font-size', '18px')  
+        .attr('fill', 'black')  
+        .text('smaller shape will be the value you submit ->');
+    const text_cont4 = svg.append("text")
+        .attr('x', 200)           
+        .attr('y', 520)          
+        .attr('font-size', '18px')  
+        .attr('fill', 'black')  
+        .text('*Note: If you believe the larger shape holds 2x as many points, it would hold 100% more points,');
+    const text_cont5 = svg.append("text")
+        .attr('x', 200)           
+        .attr('y', 550)          
+        .attr('font-size', '18px')  
+        .attr('fill', 'black')  
+        .text('you would submit 100. If the larger shape holds 3x as many points, it holds 200% more points, etc. ');
+  }
+
+  const end_page = () => {
+    const end_text = svg.append("text")
+        .attr('x', 370)           
+        .attr('y', 100)          
+        .attr('font-size', '18px')  
+        .attr('fill', 'black')        
+        .text('Thank you for completing the survey, you may close this window now.');
+  }
+
+  const clear_page = () => {
+    d3.selectAll('text').remove()
+    d3.selectAll('#test_shape').remove()
+  }
+
+  const next_page = () => {
+    let next_page_idx = pages.indexOf(current_page) + 1
+    if (next_page_idx < pages.length)
+        current_page = pages[next_page_idx]
+    
+    clear_page()
+    render_page()
+  }
+
+  const clear_input = () => {
+    const input_box = document.getElementById("answer")
+    input_box.style.display = "block"
+
+    input_box.value = ""
+  }
+
+  const hide_input_continue = () => {
+    const input_box = document.getElementById("answer")
+    input_box.style.visibility = "hidden"
+
+    d3.selectAll('#continue_button').remove()
+
+  }
+
+  const filter_valid_pairs_rect = (x_min, x_max, y_min, y_max) => {
+    
+    let valid_points = points.filter((point) => ((point.x_coor >= x_min) && (point.x_coor <= x_max) 
+                                            && (point.y_coor >= y_min && point.y_coor <= y_max) ))
+
+      return valid_points.length   
+  }
+
+  const filter_valid_pairs_circ = (cx, cy, r_2) => {
+    let valid_points = points.filter((point) => (Math.pow(point.x_coor - cx, 2) + Math.pow(point.y_coor - cy, 2) <= r_2))
+
+    return valid_points.length
+  }
+
+  const filter_valid_pairs_parab = (a, h_k, stand_dif) => {
+    let valid_points = points.filter((point) => (Math.pow((point.x_coor+stand_dif) - h_k.x, 2) - (4*a*(point.y_coor - h_k.y)) < 0))
+
+    return valid_points.length
+  }
+
+  const calculate_correct_value = () => {
+
+    //determine constraints
+    let counts = []
+    let shape_dif = 0
+
+    for( let shape in shape_constraints){
+      const constrains = shape_constraints[shape]
+
+      if(shape_constraints[shape].length === 4){
+        const x_min = constrains[0] 
+        const x_max = constrains[0] + constrains[2]
+        const y_min = constrains[1] 
+        const y_max = constrains[1] + constrains[3]
+
+        counts.push(filter_valid_pairs_rect(x_min, x_max, y_min, y_max))
+      } else if (shape_constraints[shape].length === 3) {
+        const cx = constrains[0]
+        const cy = constrains[1]
+        const r = constrains[2]
+
+        const r_2 = r*r
+        counts.push(filter_valid_pairs_circ(cx, cy, r_2))
+      } else {
+        const curve_points = constrains[0]
+        const x_y = curve_points[0]
+        const h_k = curve_points[1]
+        const a = Math.pow((x_y.x - h_k.x), 2) / (4 * (x_y.y - h_k.y))
+
+        let stand_dif = 0
+
+        if(shape === ('shape 2')){
+          stand_dif = 475
+        }
+
+        counts.push(filter_valid_pairs_parab(a, h_k, stand_dif))
+      }
+    }
+
+    //console.log(counts)
+
+    let count_shape1 = counts[0]
+    let count_shape2 = counts[1]
+
+    //let point_differnce = Math.abs(count_shape1 - count_shape2)
+
+    let larger_points = count_shape1 > count_shape2 ? count_shape1 : count_shape2
+    let smaller_points = count_shape1 < count_shape2 ? count_shape1 : count_shape2
+
+    let percent_difference = ((larger_points/smaller_points) - 1) * 100
+
+    //console.log(point_differnce, percent_difference)
+
+    return percent_difference
+  }
+
+  const send_info_db = async () => {
+
+    if(current_page == 'introduction'){
+      console.log("register")
+      const json = { pid: userId },
+        body = JSON.stringify(json)
+
+      const response = await fetch('/register_pid', {
+        method: 'POST',
+        headers: { "Content-Type": "application/json" },
+        body
+      })
+
+    } else if (current_page !== 'tutorial') {
+      const correct_value = calculate_correct_value()
+
+      const question_num = pages.indexOf(current_page)
+
+      const user_value = document.querySelector('#answer'),
+        json = { pid: userId, question_num: question_num, question_id: current_page, user_value: user_value.value, correct_value: correct_value},
+        body = JSON.stringify(json)
+
+      const response = await fetch('/submitEntry', {
+        method: 'POST',
+        headers: { "Content-Type": "application/json" },
+        body
+    })
+    }
+  }
+
+  const continue_button = () => {
+    const continute_button = svg.append("rect")
+        .attr("x", 1050)
+        .attr("y", 500)
+        .attr("width", 100)
+        .attr("height", 50)
+        .attr("stroke", "black")
+        .attr("stroke-width", 1)
+        .attr("fill", "#bae4fa")
+        .attr("id", "continue_button")
+        .on("mouseover", function() {
+            d3.select(this).style("cursor", "pointer")
+        })
+        .on("click", function() {
+            send_info_db()
+            next_page()
+            clear_input()
+        });
+    
+    const continute_text = svg.append("text")
+        .attr('x', 1063)           
+        .attr('y', 530)          
+        .attr('font-size', '18px')  
+        .attr('fill', 'black')        
+        .text('Continue')
+        .attr("id", "continue_button")
+        .on("mouseover", function() {
+            d3.select(this).style("cursor", "pointer")
+        })
+        .on("click", function() {
+            send_info_db()
+            next_page()
+            clear_input()
+        });
+    
+  }
+
+  const render_axis = () => {
+    const stand_x = 300
+    const stand_y = 400
+
+    const stand_x_dif = 450
+
+    const x_axis_1 = svg.append("line")
+        .attr("x1", stand_x)
+        .attr("y1", stand_y)
+        .attr("x2", stand_x + 250)
+        .attr("y2", stand_y)
+        .attr("stroke", "black")
+        .attr("stroke-width", 3)
+        .attr("id", "test_shape");
+
+    const y_axis_1 = svg.append("line")
+        .attr("x1", stand_x)
+        .attr("y1", stand_y - 200)
+        .attr("x2", stand_x)
+        .attr("y2", stand_y)
+        .attr("stroke", "black")
+        .attr("stroke-width", 3)
+        .attr("id", "test_shape");
+
+    const x_axis_2 = svg.append("line")
+        .attr("x1", stand_x + stand_x_dif)
+        .attr("y1", stand_y)
+        .attr("x2", stand_x + stand_x_dif + 250)
+        .attr("y2", stand_y)
+        .attr("stroke", "black")
+        .attr("stroke-width", 3)
+        .attr("id", "test_shape");
+
+    const y_axis_2 = svg.append("line")
+        .attr("x1", stand_x + stand_x_dif)
+        .attr("y1", stand_y - 200)
+        .attr("x2", stand_x + stand_x_dif)
+        .attr("y2", stand_y)
+        .attr("stroke", "black")
+        .attr("stroke-width", 3)
+        .attr("id", "test_shape");
+
+    let list_x = [stand_x, stand_y - 200, stand_x + 250, stand_y]
+
+    return list_x
+  }
+
+  const render_scatters = () => {
+    points = []
+    const axis_values = render_axis()
+    const min_x = axis_values[0] + 5
+    const min_y = axis_values[1] - 5
+    const max_x = axis_values[2] 
+    const max_y = axis_values[3] 
+
+
+    //NOTE: difference for graph2 plot is +250x
+
+    const num_points = 200
+
+    for(let i = 0; i < num_points; i++) {
+        const x_coor = Math.random() * (max_x - min_x) + min_x
+        const y_coor = Math.random() * (max_y - min_y) + min_y
+
+        points.push({x_coor, y_coor})
+
+        const point_g1 = svg.append("circle")
+            .attr("cx", x_coor)
+            .attr("cy", y_coor)
+            .attr("r", 5)
+            .attr("fill", "gray")
+            .attr("id", "test_shape");
+
+        const point_g2 = svg.append("circle")
+            .attr("cx", x_coor + 450)
+            .attr("cy", y_coor)
+            .attr("r", 5)
+            .attr("fill", "gray")
+            .attr("id", "test_shape");
+    }
+  }
+
+  const render_rectangles = (base_x, base_y, stand_dif) => {
+    const scale_factor = 150
+
+    //randomization of rectangle
+    const width1 = Math.random() * scale_factor + 10
+    const height1 = Math.random() * scale_factor + 10
+    shape_constraints['shape 1'] = [base_x, base_y, width1, height1]
+
+    const width2 = Math.random() * scale_factor + 10
+    const height2 = Math.random()  * scale_factor + 10
+    shape_constraints['shape 2'] = [base_x, base_y, width2, height2]
+
+    const test_rect1 = svg.append("rect")
+        .attr('x', base_x)
+        .attr('y', base_y)
+        .attr("width", width1)
+        .attr("height", height1)
+        .attr("stroke", "black")
+        .attr("stroke-width", 2.5)
+        .attr("fill", "none")
+        .attr("id", "test_shape");
+
+    const test_rect2 = svg.append("rect")
+        .attr('x', base_x + stand_dif)
+        .attr('y', base_y)
+        .attr("width", width2)
+        .attr("height", height2)
+        .attr("stroke", "black")
+        .attr("stroke-width", 2.5)
+        .attr("fill", "none")
+        .attr("id", "test_shape");
+
+  }
+
+  const render_circle = (base_x, base_y, stand_dif) => {
+    const scale_factor = 50
+
+    base_x += 50
+    base_y += 50
+
+    const r1 = Math.random() * scale_factor + 10
+    const r2 = Math.random() * scale_factor + 10
+
+    const test_circle1 = svg.append("circle")
+        .attr('cx', base_x)
+        .attr('cy', base_y)
+        .attr('r', r1)
+        .attr("stroke", "black")
+        .attr("stroke-width", 2.5)
+        .attr("fill", "none")
+        .attr("id", "test_shape");
+    
+    const test_circle2 = svg.append("circle")
+        .attr('cx', base_x + stand_dif)
+        .attr('cy', base_y)
+        .attr('r', r2)
+        .attr("stroke", "black")
+        .attr("stroke-width", 2.5)
+        .attr("fill", "none")
+        .attr("id", "test_shape");
+  }
+
+  const render_parabola = (stand_dif) => {
+    //generate random point on the graph
+    const axis_values = render_axis()
+    const min_x = axis_values[0] + 5
+    const min_y = axis_values[1] - 5
+    const max_x = axis_values[2] - 10
+    const max_y = axis_values[3] 
+
+    const x_coor1 = Math.random() * (max_x - min_x) + min_x
+    const y_coor1 = Math.random() * (max_y - min_y) + min_y
+
+    const x_coor2 = Math.random() * (max_x - min_x) + min_x
+    const y_coor2 = Math.random() * (max_y - min_y) + min_y
+
+    //what is max distance to origin/end -> do half of that on either side
+    let max_dist_x_1 = Math.min(x_coor1 - min_x, max_x - x_coor1)
+    let x_dist_either_side_1 = max_dist_x_1/2
+
+    let max_dist_x_2 = Math.min(x_coor2 - min_x, max_x - x_coor2)
+    let x_dist_either_side_2 = max_dist_x_2/2
+
+    stand_dif = stand_dif - 25
+
+    console.log(x_coor1, y_coor1)
+    console.log(x_coor1 - x_dist_either_side_1, max_y)
+
+    //set points
+    let curve_points_1 = [{x: x_coor1 - x_dist_either_side_1, y: max_y}, {x: x_coor1, y: y_coor1}, {x: x_coor1 + x_dist_either_side_1, y: max_y}]
+    let curve_points_2 = [{x: x_coor2 - x_dist_either_side_2 + stand_dif, y: max_y}, {x: x_coor2 + stand_dif, y: y_coor1}, {x: x_coor2 + x_dist_either_side_2 + stand_dif, y: max_y}]
+
+    shape_constraints['shape 1'] = [curve_points_1]
+    shape_constraints['shape 2'] = [curve_points_2]
+
+    //have it go /2 either side
+    //draw curve
+    const createCurve = d3.line()
+      .curve(d3.curveBasis)
+      .x(function(d) { return d.x })
+      .y(function(d) { return d.y })
+    
+    const parabola1 = svg.append('path')
+      .attr('d', createCurve(curve_points_1))
+      .attr('stroke', 'black')
+      .attr("stroke-width", 3)
+      .attr('fill', 'none')
+      .attr('id', 'test_shape')
+
+    const parabola2 = svg.append('path')
+      .attr('d', createCurve(curve_points_2))
+      .attr('stroke', 'black')
+      .attr("stroke-width", 3)
+      .attr('fill', 'none')
+      .attr('id', 'test_shape')
+
+
+  }
+
+  const render_visualization = () => {
+    const base_x = 320
+    const base_y = 220
+
+    const stand_dif = 500
+    
+    //base stats for x and y of vis
+    render_scatters()
+
+    if(current_page.includes('rect')){
+        render_rectangles(base_x, base_y, stand_dif)
+    } else if(current_page.includes('circle')) {
+        render_circle(base_x, base_y, stand_dif)
+    } else if(current_page.includes('parab')){
+        render_parabola(stand_dif)
+    }
+  }
+
+  const render_test_text = () => {
+    const intro_text = svg.append("text")
+        .attr('x', 150)           
+        .attr('y', 100)          
+        .attr('font-size', '18px')  
+        .attr('fill', 'black')        
+        .text('Given identical scatterplots, estimate the percentage of more points the larger shape encompasses compared to the smaller shape. ');
+    
+  }
+
+  const render_test_page = () => {
+    render_test_text()
+    render_visualization()
+  }
+
+  const render_page = () => {
+    if(current_page == 'introduction'){
+        introduction_page()
+        continue_button()
+    } else if (current_page == 'tutorial'){
+        tutorial_page()
+        continue_button()
+    } else if (current_page == 'end') {
+        hide_input_continue()
+        end_page()
+    } else {
+        render_test_page()
+        continue_button()
+    }    
+  }
+
+  const survey = () => {
+    initilize_id()
+    initialize_pages()
+    render_page()
+  }
+
+
+  survey()
+
+</script>
+
+<input type="number" id="answer" style="display: none; position: absolute; left:570px; top:500px;"><br><br>

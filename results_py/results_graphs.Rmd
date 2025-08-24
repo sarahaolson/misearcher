@@ -1,0 +1,77 @@
+```{r}
+library(ggplot2)
+library(dplyr)
+library(boot)
+```
+
+```{r}
+rectangle_data <- read.csv("results_py/log_error_datasets/rect_acc.csv")
+circle_data <- read.csv("results_py/log_error_datasets/circle_acc.csv")
+parabola_data <- read.csv("results_py/log_error_datasets/parab_acc.csv")
+```
+
+```{r}
+circle_data$shape <- "Circle"
+rectangle_data$shape <- "Rectangle"
+parabola_data$shape <- "Parabola"
+
+```
+
+```{r}
+#average log2error - for ranking
+mean(circle_data$log_error)
+mean(rectangle_data$log_error)
+mean(parabola_data$log_error)
+
+```
+
+```{r}
+# combine datasets
+combined_data <- bind_rows(parabola_data, rectangle_data, circle_data)
+```
+
+```{r}
+bootstrap_ci <- function(data, n_bootstrap = 1000, conf_level = 0.95) {
+  # Define the statistic function to calculate the mean
+  statistic <- function(data, indices) {
+    return(mean(data[indices]))
+  }
+
+  # bootstrap results
+  boot_results <- boot(data, statistic, R = n_bootstrap)
+
+  # confidence intervals
+  ci <- boot.ci(boot_results, type = "bca", conf = conf_level)
+  return(c(ci$bca[4], ci$bca[5])) #lower and upper bounds
+}
+
+```
+
+```{r}
+# actual results to plot
+ci_results <- combined_data %>%
+  group_by(shape) %>%
+  summarize(
+    ci_lower = bootstrap_ci(log_error)[1],
+    ci_upper = bootstrap_ci(log_error)[2],
+    mean_error = mean(log_error)
+  )
+
+```
+
+```{r}
+
+ggplot(ci_results, aes(x = mean_error, y = shape)) +
+  geom_point() + # mean point
+  geom_errorbarh(aes(xmin = ci_lower, xmax = ci_upper),
+                 height = 0.2) +  # error bars
+  labs(x = "Log Error", y = "Shape", # labels
+       title = "Bootstrapped 95% Confidence Intervals for Log 2 Error")
+
+# save plot
+ggsave("img/log_error_plot.png",
+       plot = last_plot(),
+       width = 6,
+       height = 4,
+       dpi = 300)
+```
