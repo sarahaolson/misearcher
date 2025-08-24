@@ -9,7 +9,7 @@ app.use(express.json())
 //app.use(express.urlencoded({extended: true}))
 
 
-const uri = `mongodb+srv://misiubear:uvO2AKgYbX7ywilU@cluster0.sgrgh26.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
+const uri = `mongodb+srv://${process.env.USER}:${process.env.PASS}@${process.env.HOST}`;
 const client = new MongoClient(uri)
 
 let survey_data = null
